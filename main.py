@@ -3,6 +3,7 @@
 import sys
 import tty
 import termios
+import string
 
 
 def move_cursor(y, x):
@@ -24,6 +25,14 @@ def exit():
 def main():
     buffer = [""]
     line_no = 0  # Zero based
+    def generate_generic_key(k):
+        def handler():
+           buffer[line_no] += k
+        return handler
+    current_mode = "insert"
+    modes = {
+        "insert": {k: generate_generic_key(k) for k in string.printable}
+    }
     column = 0  # Zero based
     tty.setcbreak(sys.stdin.fileno())
     print("Welcome to vibe a.k.a. vi Barebones Editor")
@@ -45,7 +54,7 @@ def main():
                     del buffer[line_no]
                     line_no -= 1
             else:
-                buffer[line_no] += x
+                modes["insert"][x]()
             clear_screen()
             move_cursor(1, 1)
             print(buffer)
