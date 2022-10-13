@@ -33,17 +33,22 @@ def main():
         except KeyboardInterrupt:
             exit()
         else:
-            if x == "\12":
+            if x == "\n":
                 line_no += 1
                 buffer = buffer[:line_no] + [""] + buffer[line_no:]
-            if ord(x) == 127:
-                buffer[line_no] = buffer[line_no][:-1]
-
-
+            elif x == "\12":
+                pass
+            elif ord(x) == 127:
+                if len(buffer[line_no]):
+                    buffer[line_no] = buffer[line_no][:-1]
+                else:
+                    del buffer[line_no]
+                    line_no -= 1
             else:
                 buffer[line_no] += x
             clear_screen()
             move_cursor(1, 1)
+            print(buffer)
             for line in buffer:
                 print(line)
             print(ord(x))
