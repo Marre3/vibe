@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import copy
 
@@ -176,6 +177,7 @@ def main():
     modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
 
     def command_w(args):
+        """ Write to file """
         nonlocal buffer_action
         buffer = buffer_action(ACTION_NOOP)
         if len(args) == 0:
@@ -184,15 +186,41 @@ def main():
             input("\nMalformed write command... Press enter to continue.")
         else:
             filename = args[1:]
-            input(f"file: {filename}")
             try:
                 with open(filename, "w") as f:
                     f.write("\n".join(buffer))
             except IOError:
-                input("\nUnable to write to file filename... Press enter to continue.")
+                input(f"\nUnable to write to file {filename}... Press enter to continue.")
+
+    def command_file(args):
+        """ Open file """
+        nonlocal buffer_action
+        nonlocal line_no
+        nonlocal column
+        if len(args) == 0:
+            input("\nNo filename given... Press enter to continue.")
+        elif not args.startswith(" "):
+            input("\nMalformed file command... Press enter to continue.")
+        else:
+            filename = args[1:]
+            if os.path.exists(filename):
+                try:
+                    with open(filename, "r") as f:
+                        contents = f.read()
+                except IOError:
+                    input(f"\nUnable to read file {filename}... Press enter to continue.")
+                else:
+                    buffer_action = new_undoable(contents.split("\n"))
+                    line_no = 0
+                    column = 0
+            else:
+                input(f"\nFile {filename} not found... Press enter to continue.")
+
     commands = {
         "q": lambda args: exit(),
-        "w": command_w
+        "w": command_w,
+        "f": command_file,
+        "file": command_file,
     }
 
     def run_command(state):
