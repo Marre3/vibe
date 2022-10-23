@@ -119,8 +119,8 @@ def main():
         nonlocal line_no
         line_no = line_no + 1
         state.insert(line_no, "")
-    modes["insert"][ord("\n")] = lambda: buffer_action(action_newline)
-    modes["insert"][ord("\r")] = lambda: None
+    modes["insert"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(action_newline)
+    modes["insert"][ord("\r" if is_unix else "\n")] = lambda: None
 
     def action_backspace(state):
         nonlocal line_no
