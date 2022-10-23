@@ -163,16 +163,16 @@ def main():
     modes["normal"][ord("i")] = lambda: buffer_action(lambda state: set_mode("insert"))
     modes["normal"][ord(":")] = lambda: buffer_action(lambda state: set_mode("command"))
 
-    def move_cursor(c, l):
+    def move_cursor(c, l, state):
         nonlocal line_no
         nonlocal column
-        line_no = clamp(0, len(buffer) - 1, line_no + l)
-        column = clamp(0, len(buffer[line_no]), column + c)
+        line_no = clamp(0, len(state) - 1, line_no + l)
+        column = clamp(0, len(state[line_no]), column + c)
 
-    modes["normal"][ord("h")] = lambda: buffer_action(lambda state: move_cursor(-1, 0))
-    modes["normal"][ord("l")] = lambda: buffer_action(lambda state: move_cursor(1, 0))
-    modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1))
-    modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1))
+    modes["normal"][ord("h")] = lambda: buffer_action(lambda state: move_cursor(-1, 0, state))
+    modes["normal"][ord("l")] = lambda: buffer_action(lambda state: move_cursor(1, 0, state))
+    modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1, state))
+    modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
 
     def action_backspace(state):
         nonlocal line_no
