@@ -147,8 +147,9 @@ def main():
     def action_newline(state):
         nonlocal line_no
         nonlocal column
+        state.insert(line_no + 1, state[line_no][column:])
+        state[line_no] = state[line_no][:column]
         line_no = line_no + 1
-        state.insert(line_no, "")
         column = 0
     modes["insert"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(action_newline)
     modes["insert"][ord("\r" if is_unix else "\n")] = no_op
