@@ -14,7 +14,7 @@ except ImportError:
     is_unix = False
     import msvcrt
 
-def move_cursor(y, x):
+def set_cursor_position(y, x):
     print("\033[%d;%dH" % (y, x))
 
 def clear_screen():
@@ -98,6 +98,15 @@ def get_key_or_exit():
     return x
 
 
+def clamp(minimum, maximum, value):
+    """ Clamp a value to be within the range [minimum, maximum] """
+    if value < minimum:
+        return minimum
+    elif value > maximum:
+        return maximum
+    else:
+        return value
+
 def no_op():
     pass
 
@@ -123,8 +132,10 @@ def main():
 
     def action_newline(state):
         nonlocal line_no
+        nonlocal column
         line_no = line_no + 1
         state.insert(line_no, "")
+        column = 0
     modes["insert"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(action_newline)
     modes["insert"][ord("\r" if is_unix else "\n")] = no_op
 
@@ -139,6 +150,17 @@ def main():
         current_mode = "insert"
 
     modes["normal"][ord("i")] = lambda: buffer_action(action_enter_insert_mode)
+
+    def move_cursor(c, l):
+        nonlocal line_no
+        nonlocal column
+        line_no = clamp(0, len(buffer) - 1, line_no + l)
+        column = clamp(0, len(buffer[line_no]), column + c)
+
+    modes["normal"][ord("h")] = lambda: buffer_action(lambda state: move_cursor(-1, 0))
+    modes["normal"][ord("l")] = lambda: buffer_action(lambda state: move_cursor(1, 0))
+    modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1))
+    modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1))
 
     def action_backspace(state):
         nonlocal line_no
@@ -166,13 +188,14 @@ def main():
 
         # Update screen
         clear_screen()
-        move_cursor(1, 1)
+        set_cursor_position(1, 1)
         buffer = buffer_action(ACTION_NOOP)
         print(buffer)
         for line in buffer:
             print(line)
         print(ord(key))
         print(f"mode: {current_mode}")
+        print(f"cursor: {line_no},{column}")
 
 if __name__ == "__main__":
     main()
