@@ -139,17 +139,13 @@ def main():
     modes["insert"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(action_newline)
     modes["insert"][ord("\r" if is_unix else "\n")] = no_op
 
-    def action_exit_insert_mode(state):
+    def set_mode(mode):
         nonlocal current_mode
-        current_mode = "normal"
+        current_mode = mode
+
     # Escape
-    modes["insert"][27] = lambda: buffer_action(action_exit_insert_mode)
-
-    def action_enter_insert_mode(state):
-        nonlocal current_mode
-        current_mode = "insert"
-
-    modes["normal"][ord("i")] = lambda: buffer_action(action_enter_insert_mode)
+    modes["insert"][27] = lambda: buffer_action(lambda state: set_mode("normal"))
+    modes["normal"][ord("i")] = lambda: buffer_action(lambda state: set_mode("insert"))
 
     def move_cursor(c, l):
         nonlocal line_no
