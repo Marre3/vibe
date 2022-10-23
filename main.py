@@ -175,16 +175,21 @@ def main():
     modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1, state))
     modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
 
+    commands = {
+        "q": lambda arg: exit()
+    }
+
     def run_command(state):
         nonlocal buffer_action
         nonlocal command_buffer
         cmd = command_buffer
-        i = 0
-        while i < len(cmd):
-            if cmd[i] == "q":
-                exit()
-            i += 1
         command_buffer = ""
+        i = 0
+        while i <= len(cmd):
+            if cmd[:i] in commands:
+                commands[cmd[:i]](cmd[i:])
+                return
+            i += 1
 
     modes["command"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(run_command)
     modes["command"][ord("\r" if is_unix else "\n")] = no_op
