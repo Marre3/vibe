@@ -175,8 +175,24 @@ def main():
     modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1, state))
     modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
 
+    def command_w(args):
+        nonlocal buffer_action
+        buffer = buffer_action(ACTION_NOOP)
+        if len(args) == 0:
+            input("\nNo filename given... Press enter to continue.")
+        elif not args.startswith(" "):
+            input("\nMalformed write command... Press enter to continue.")
+        else:
+            filename = args[1:]
+            input(f"file: {filename}")
+            try:
+                with open(filename, "w") as f:
+                    f.write("\n".join(buffer))
+            except IOError:
+                input("\nUnable to write to file filename... Press enter to continue.")
     commands = {
-        "q": lambda arg: exit()
+        "q": lambda args: exit(),
+        "w": command_w
     }
 
     def run_command(state):
