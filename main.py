@@ -21,7 +21,7 @@ def clear_screen():
     print("\033[2J")
 
 def exit():
-    print("Exiting...")
+    print("\nExiting...")
     if is_unix:
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
@@ -174,6 +174,20 @@ def main():
     modes["normal"][ord("l")] = lambda: buffer_action(lambda state: move_cursor(1, 0, state))
     modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1, state))
     modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
+
+    def run_command(state):
+        nonlocal buffer_action
+        nonlocal command_buffer
+        cmd = command_buffer
+        i = 0
+        while i < len(cmd):
+            if cmd[i] == "q":
+                exit()
+            i += 1
+        command_buffer = ""
+
+    modes["command"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(run_command)
+    modes["command"][ord("\r" if is_unix else "\n")] = no_op
 
     def action_backspace(state):
         nonlocal line_no
