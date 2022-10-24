@@ -111,11 +111,10 @@ def clamp(minimum, maximum, value):
 def no_op():
     pass
 
-def main():
+def main(argv):
     column = 0  # Zero based
-    buffer_action = new_undoable([""])
-    command_buffer = ""
     line_no = 0  # Zero based
+    command_buffer = ""
     def generate_generic_key(k):
         if 32 <= k < 127 or 128 <= k < 256:
             def key_action(state):
@@ -255,9 +254,25 @@ def main():
     modes["normal"][26] = lambda: buffer_action(ACTION_UNDO)
     modes["normal"][24] = lambda: buffer_action(ACTION_REDO)
 
+
     if is_unix:
         tty.setcbreak(sys.stdin.fileno())
-    print_splash()
+
+    if len(argv) > 1:
+        filename = argv[1]
+        if os.path.exists(filename):
+            with open(filename) as f:
+                contents = f.read()
+            buffer_action = new_undoable(contents.split())
+        else:
+            input(f"File {filename} not found. Press enter to continue.")
+
+        buffer = buffer_action(ACTION_NOOP)
+        for line in buffer:
+            print(line)
+    else:
+        buffer_action = new_undoable([""])
+        print_splash()
     while True:
         key = get_key_or_exit()
         modes[current_mode][ord(key)]()
@@ -277,5 +292,5 @@ def main():
             sys.stdout.flush()
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
     exit()
