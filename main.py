@@ -16,7 +16,8 @@ except ImportError:
     import msvcrt
 
 def set_cursor_position(y, x):
-    print("\033[%d;%dH" % (y, x))
+    print(f"\033[{y};{x}H", end="")
+    sys.stdout.flush()
 
 def clear_screen():
     print("\033[2J")
@@ -281,15 +282,17 @@ def main(argv):
         clear_screen()
         set_cursor_position(1, 1)
         buffer = buffer_action(ACTION_NOOP)
-        print(buffer)
         for line in buffer:
             print(line)
         print(ord(key))
+        print(buffer)
         print(f"mode: {current_mode}")
         print(f"cursor: {line_no},{column}")
         if current_mode == "command":
-            print(f"cmd: {command_buffer}", end="")
+            print(f":{command_buffer}", end="")
             sys.stdout.flush()
+        else:
+            set_cursor_position(line_no + 1, column + 1)
 
 if __name__ == "__main__":
     main(sys.argv)
