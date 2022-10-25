@@ -114,6 +114,7 @@ def no_op():
     pass
 
 def main(argv):
+    is_debug_mode = False
     column = 0  # Zero based
     line_no = 0  # Zero based
     command_buffer = ""
@@ -217,6 +218,11 @@ def main(argv):
             else:
                 input(f"\nFile {filename} not found... Press enter to continue.")
 
+    def command_debug(args):
+        """ Toggles debug mode """
+        nonlocal is_debug_mode
+        is_debug_mode = not is_debug_mode
+
     def command_search(args):
         nonlocal buffer_action
         nonlocal line_no
@@ -251,10 +257,11 @@ def main(argv):
 
 
     commands = {
-        "q": lambda args: exit(),
+        "q": lambda args: exit(), # TODO: Check for unsaved changes?
         "w": command_w,
         "f": command_file,
         "file": command_file,
+        "debug": command_debug,
         "/": command_search,
         "s": command_search_replace,
     }
@@ -321,10 +328,10 @@ def main(argv):
         buffer = buffer_action(ACTION_NOOP)
         for line in buffer:
             print(line)
-        print(ord(key))
-        print(buffer)
-        print(f"mode: {current_mode}")
-        print(f"cursor: {line_no},{column}")
+        if is_debug_mode:
+            print(ord(key))
+            print(buffer)
+        print(f"mode: {current_mode}, cursor: {line_no},{column}")
         if current_mode == "command":
             print(f":{command_buffer}", end="")
             sys.stdout.flush()
