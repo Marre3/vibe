@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import sys
 import copy
 
@@ -222,25 +223,39 @@ def main(argv):
         nonlocal is_debug_mode
         is_debug_mode = not is_debug_mode
 
+    def command_search(args):
+        nonlocal buffer_action
+        nonlocal line_no
+        nonlocal column
+        buffer = buffer_action(ACTION_NOOP)
+        for index, line in enumerate(buffer):
+            match = re.search(args, line)
+            if match:
+                line_no = index
+                column = match.span()[0]
+                return
+
+        input(f'\nNo match found for "{args}"... Press enter to continue.')
+
     commands = {
         "q": lambda args: exit(), # TODO: Check for unsaved changes?
         "w": command_w,
         "f": command_file,
         "file": command_file,
         "debug": command_debug,
+        "/": command_search,
     }
 
     def run_command(state):
         nonlocal buffer_action
         nonlocal command_buffer
-        nonlocal current_mode
         cmd = command_buffer
         command_buffer = ""
         i = 0
         while i <= len(cmd):
             if cmd[:i] in commands:
                 commands[cmd[:i]](cmd[i:])
-                current_mode = "normal"
+                set_mode("normal")
                 return
             i += 1
 
