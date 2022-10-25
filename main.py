@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import sys
 import copy
 
@@ -216,11 +217,27 @@ def main(argv):
             else:
                 input(f"\nFile {filename} not found... Press enter to continue.")
 
+    def command_search(args):
+        nonlocal buffer_action
+        nonlocal line_no
+        nonlocal column
+        buffer = buffer_action(ACTION_NOOP)
+        for index, line in enumerate(buffer):
+            match = re.search(args, line)
+            if match:
+                line_no = index
+                column = match.span()[0]
+                return
+
+        input(f'\nNo match found for "{args}"... Press enter to continue.')
+
+
     commands = {
         "q": lambda args: exit(),
         "w": command_w,
         "f": command_file,
         "file": command_file,
+        "/": command_search,
     }
 
     def run_command(state):
