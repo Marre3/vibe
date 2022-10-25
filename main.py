@@ -232,12 +232,31 @@ def main(argv):
         input(f'\nNo match found for "{args}"... Press enter to continue.')
 
 
+    def search_and_replace(buffer, search, replace):
+        for index, line in enumerate(buffer):
+            buffer[index] = re.sub(search, replace, line)
+
+
+    def command_search_replace(args):
+        nonlocal column
+        nonlocal line_no
+        nonlocal buffer_action
+        if args.startswith("/"):
+            search, replace = args[1:].split("/")
+            buffer_action(lambda state: search_and_replace(state, search, replace))
+            buffer = buffer_action(ACTION_NOOP)
+            column = clamp(0, len(buffer[line_no]), column)
+        else:
+            input("\nMalformed search-replace command... Press enter to continue.")
+
+
     commands = {
         "q": lambda args: exit(),
         "w": command_w,
         "f": command_file,
         "file": command_file,
         "/": command_search,
+        "s": command_search_replace,
     }
 
     def run_command(state):
