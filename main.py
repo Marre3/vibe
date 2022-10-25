@@ -243,14 +243,13 @@ def main(argv):
     def run_command(state):
         nonlocal buffer_action
         nonlocal command_buffer
-        nonlocal current_mode
         cmd = command_buffer
         command_buffer = ""
         i = 0
         while i <= len(cmd):
             if cmd[:i] in commands:
                 commands[cmd[:i]](cmd[i:])
-                current_mode = "normal"
+                set_mode("normal")
                 return
             i += 1
 
