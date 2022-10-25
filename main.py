@@ -279,8 +279,15 @@ def main(argv):
                 return
             i += 1
 
+    def command_mode_backspace():
+        nonlocal command_buffer
+        if command_buffer:
+            command_buffer = command_buffer[:-1]
+
     modes["command"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(run_command)
     modes["command"][ord("\r" if is_unix else "\n")] = no_op
+
+    modes["command"][127 if is_unix else 8] = command_mode_backspace
 
     def action_backspace(state):
         nonlocal line_no
