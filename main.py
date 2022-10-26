@@ -351,14 +351,14 @@ def main(argv):
         #    print(line)
     else:
         buffer_action = new_undoable([""], make_carried_state)
-    clear_screen()
-    set_cursor_position(1, 1)
-    print_splash()
+    if len(argv) == 1:
+        # Only show splash screen if no file was specified
+        clear_screen()
+        set_cursor_position(1, 1)
+        print_splash()
+        get_key_or_exit()
     scroll = 0
     while True:
-        key = get_key_or_exit()
-        modes[current_mode][ord(key)]()
-
         # Update screen
         clear_screen()
         set_cursor_position(1, 1)
@@ -380,6 +380,10 @@ def main(argv):
             sys.stdout.flush()
         else:
             set_cursor_position(line_no + 1 - scroll, column + 1)
+
+        key = get_key_or_exit()
+        modes[current_mode][ord(key)]()
+
 
 if __name__ == "__main__":
     main(sys.argv)
