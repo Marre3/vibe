@@ -42,7 +42,7 @@ ACTION_REDO = 2
 # An undoable maintains state changes
 # by ensuring all changes made to it are made using
 # either a function or a special constant.
-# Carried state is generated for each action. 
+# Carried state is generated for each action.
 def new_undoable(starting_state, carried_state_gen):
     def fresh_copy():
         return copy.deepcopy(starting_state)
@@ -121,7 +121,7 @@ def main(argv):
     column = 0  # Zero based
     line_no = 0  # Zero based
     command_buffer = ""
-    
+
     def make_carried_state():
         return (column, line_no)
 
@@ -269,7 +269,7 @@ def main(argv):
                 search_and_replace(state, search, replace)
                 (c_column, c_line_no) = carried
                 column = clamp(0, len(state[c_line_no]), c_column)
-                line_no = c_line_no 
+                line_no = c_line_no
             buffer_action(search_and_replace_action)
         else:
             input("\nMalformed search-replace command... Press enter to continue.")
@@ -352,6 +352,7 @@ def main(argv):
     else:
         buffer_action = new_undoable([""], make_carried_state)
     print_splash()
+    scroll = 0
     while True:
         key = get_key_or_exit()
         modes[current_mode][ord(key)]()
@@ -360,7 +361,13 @@ def main(argv):
         clear_screen()
         set_cursor_position(1, 1)
         buffer = buffer_action(ACTION_NOOP)
-        for line in buffer:
+        terminal_size = os.get_terminal_size()
+        height = terminal_size.lines - (7 if is_debug_mode else 3) # Leave some space at the bottom of screen
+        if line_no >= scroll + height:
+            scroll = line_no - height + 1
+        if line_no < scroll:
+            scroll = line_no
+        for line in buffer[scroll:scroll + height]:
             print(line)
         if is_debug_mode:
             print(ord(key))
@@ -370,7 +377,7 @@ def main(argv):
             print(f":{command_buffer}", end="")
             sys.stdout.flush()
         else:
-            set_cursor_position(line_no + 1, column + 1)
+            set_cursor_position(line_no + 1 - scroll, column + 1)
 
 if __name__ == "__main__":
     main(sys.argv)
