@@ -140,7 +140,7 @@ def main(argv):
             return handler
         else:
             return no_op
-    current_mode = "insert"
+    current_mode = "normal"
 
     def generate_command_keypress_function(k):
         if 32 <= k < 127 or 128 <= k < 256:
