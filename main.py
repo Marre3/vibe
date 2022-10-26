@@ -351,6 +351,8 @@ def main(argv):
         #    print(line)
     else:
         buffer_action = new_undoable([""], make_carried_state)
+    clear_screen()
+    set_cursor_position(1, 1)
     print_splash()
     scroll = 0
     while True:
