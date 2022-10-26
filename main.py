@@ -42,7 +42,8 @@ ACTION_REDO = 2
 # An undoable maintains state changes
 # by ensuring all changes made to it are made using
 # either a function or a special constant.
-def new_undoable(starting_state):
+# Carried state is generated for each action. 
+def new_undoable(starting_state, carried_state_gen):
     def fresh_copy():
         return copy.deepcopy(starting_state)
 
@@ -50,19 +51,21 @@ def new_undoable(starting_state):
     redo_stack = []
     state = fresh_copy()
 
-    def run_action(action):
+    def run_action(action_with_carried_state):
         # TODO: This could be optimized to create checkpoints for time consuming operations
-        action(state)
 
-    def remember_action(action):
-        run_action(action)
-        history.append(action)
+        (action, carried_state) = action_with_carried_state
+        action(state, carried_state)
+
+    def remember_action(action_with_carried_state):
+        run_action(action_with_carried_state)
+        history.append(action_with_carried_state)
 
     def remake_state():
         nonlocal state
         state = fresh_copy()
-        for action in history:
-            run_action(action)
+        for action_with_carried_state in history:
+            run_action(action_with_carried_state)
 
     def undoable(action):
         nonlocal redo_stack
@@ -76,7 +79,7 @@ def new_undoable(starting_state):
                 redo = redo_stack.pop()
                 remember_action(redo)
         elif action != ACTION_NOOP:
-            remember_action(action)
+            remember_action((action, carried_state_gen()))
             redo_stack = []
         return state
 
@@ -118,12 +121,20 @@ def main(argv):
     column = 0  # Zero based
     line_no = 0  # Zero based
     command_buffer = ""
+    
+    def make_carried_state():
+        return (column, line_no)
+
     def generate_generic_key(k):
         if 32 <= k < 127 or 128 <= k < 256:
-            def key_action(state):
+            def key_action(state, carried):
+                (c_column, c_line_no) = carried
+                state[c_line_no] = state[c_line_no][:c_column] + chr(k) + state[c_line_no][c_column:]
+
                 nonlocal column
-                state[line_no] = state[line_no][:column] + chr(k) + state[line_no][column:]
-                column += 1
+                nonlocal line_no
+                column = c_column + 1
+                line_no = c_line_no
             def handler():
                 buffer_action(key_action)
             return handler
@@ -147,12 +158,14 @@ def main(argv):
         "command": {k: generate_command_keypress_function(k) for k in range(255)},
     }
 
-    def action_newline(state):
+    def action_newline(state, carried):
+        (c_column, c_line_no) = carried
+        state.insert(c_line_no + 1, state[c_line_no][c_column:])
+        state[c_line_no] = state[c_line_no][:c_column]
+
         nonlocal line_no
         nonlocal column
-        state.insert(line_no + 1, state[line_no][column:])
-        state[line_no] = state[line_no][:column]
-        line_no = line_no + 1
+        line_no = c_line_no + 1
         column = 0
     modes["insert"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(action_newline)
     modes["insert"][ord("\r" if is_unix else "\n")] = no_op
@@ -162,21 +175,22 @@ def main(argv):
         current_mode = mode
 
     # Escape
-    modes["insert"][27] = lambda: buffer_action(lambda state: set_mode("normal"))
-    modes["command"][27] = lambda: buffer_action(lambda state: set_mode("normal"))
-    modes["normal"][ord("i")] = lambda: buffer_action(lambda state: set_mode("insert"))
-    modes["normal"][ord(":")] = lambda: buffer_action(lambda state: set_mode("command"))
+    modes["insert"][27] = lambda: set_mode("normal")
+    modes["command"][27] = lambda: set_mode("normal")
+    modes["normal"][ord("i")] = lambda: set_mode("insert")
+    modes["normal"][ord(":")] = lambda: set_mode("command")
 
-    def move_cursor(c, l, state):
+    def move_cursor(c, l):
+        state = buffer_action(ACTION_NOOP)
         nonlocal line_no
         nonlocal column
         line_no = clamp(0, len(state) - 1, line_no + l)
         column = clamp(0, len(state[line_no]), column + c)
 
-    modes["normal"][ord("h")] = lambda: buffer_action(lambda state: move_cursor(-1, 0, state))
-    modes["normal"][ord("l")] = lambda: buffer_action(lambda state: move_cursor(1, 0, state))
-    modes["normal"][ord("j")] = lambda: buffer_action(lambda state: move_cursor(0, 1, state))
-    modes["normal"][ord("k")] = lambda: buffer_action(lambda state: move_cursor(0, -1, state))
+    modes["normal"][ord("h")] = lambda: move_cursor(-1, 0)
+    modes["normal"][ord("l")] = lambda: move_cursor(1, 0)
+    modes["normal"][ord("j")] = lambda: move_cursor(0, 1)
+    modes["normal"][ord("k")] = lambda: move_cursor(0, -1)
 
     def command_w(args):
         """ Write to file """
@@ -212,7 +226,7 @@ def main(argv):
                 except IOError:
                     input(f"\nUnable to read file {filename}... Press enter to continue.")
                 else:
-                    buffer_action = new_undoable(contents.split("\n"))
+                    buffer_action = new_undoable(contents.split("\n"), make_carried_state)
                     line_no = 0
                     column = 0
             else:
@@ -244,14 +258,19 @@ def main(argv):
 
 
     def command_search_replace(args):
-        nonlocal column
-        nonlocal line_no
         nonlocal buffer_action
         if args.startswith("/"):
             search, replace = args[1:].split("/")
-            buffer_action(lambda state: search_and_replace(state, search, replace))
-            buffer = buffer_action(ACTION_NOOP)
-            column = clamp(0, len(buffer[line_no]), column)
+            def search_and_replace_action(state, carried):
+                nonlocal column
+                nonlocal line_no
+                nonlocal search
+                nonlocal replace
+                search_and_replace(state, search, replace)
+                (c_column, c_line_no) = carried
+                column = clamp(0, len(state[c_line_no]), c_column)
+                line_no = c_line_no 
+            buffer_action(search_and_replace_action)
         else:
             input("\nMalformed search-replace command... Press enter to continue.")
 
@@ -266,7 +285,7 @@ def main(argv):
         "s": command_search_replace,
     }
 
-    def run_command(state):
+    def run_command():
         nonlocal buffer_action
         nonlocal command_buffer
         cmd = command_buffer
@@ -284,21 +303,26 @@ def main(argv):
         if command_buffer:
             command_buffer = command_buffer[:-1]
 
-    modes["command"][ord("\n" if is_unix else "\r")] = lambda: buffer_action(run_command)
+    modes["command"][ord("\n" if is_unix else "\r")] = run_command
     modes["command"][ord("\r" if is_unix else "\n")] = no_op
 
     modes["command"][127 if is_unix else 8] = command_mode_backspace
 
-    def action_backspace(state):
+    def action_backspace(state, carried):
+        (c_column, c_line_no) = carried
         nonlocal line_no
         nonlocal column
-        if len(state[line_no]):
-            state[line_no] = state[line_no][:-1]
-            column -= 1
-        elif line_no != 0:
-            del state[line_no]
-            line_no -= 1
-            column = len(state[line_no])
+        if len(state[c_line_no]) and c_column > 0:
+            l = state[c_line_no][:c_column-1]
+            h = state[c_line_no][c_column:]
+            state[c_line_no] = l+h
+            column = c_column - 1
+            lind_no = c_line_no
+        elif c_line_no != 0:
+            del state[c_line_no]
+            new_line_no = c_line_no - 1
+            line_no = new_line_no
+            column = len(state[new_line_no])
     modes["insert"][127 if is_unix else 8] = lambda: buffer_action(action_backspace)
 
     modes["insert"][26] = lambda: buffer_action(ACTION_UNDO)
@@ -315,16 +339,19 @@ def main(argv):
         if os.path.exists(filename):
             with open(filename) as f:
                 contents = f.read()
-            buffer_action = new_undoable(contents.split())
+            lines = contents.split()
+            if len(lines) == 0:
+                lines.append("")
+            buffer_action = new_undoable(lines, make_carried_state)
         else:
             input(f"File {filename} not found. Press enter to continue.")
 
         buffer = buffer_action(ACTION_NOOP)
-        for line in buffer:
-            print(line)
+        #for line in buffer:
+        #    print(line)
     else:
-        buffer_action = new_undoable([""])
-        print_splash()
+        buffer_action = new_undoable([""], make_carried_state)
+    print_splash()
     while True:
         key = get_key_or_exit()
         modes[current_mode][ord(key)]()
