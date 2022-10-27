@@ -365,21 +365,22 @@ def main(argv):
         buffer = buffer_action(ACTION_NOOP)
         terminal_size = os.get_terminal_size()
         height = terminal_size.lines - (7 if is_debug_mode else 3) # Leave some space at the bottom of screen
+        line_num_length = len(str(len(buffer)))
         if line_no >= scroll + height:
             scroll = line_no - height + 1
         if line_no < scroll:
             scroll = line_no
-        for line in buffer[scroll:scroll + height]:
-            print(line)
+        for i in range(scroll, clamp(0, len(buffer), scroll + height)):
+            print(f"{str(i + 1).rjust(line_num_length, ' ')} {buffer[i]}")
         if is_debug_mode:
             print(ord(key))
             print(buffer)
-        print(f"mode: {current_mode}, cursor: {line_no},{column}")
+        print(f"mode: {current_mode}, cursor: {line_no + 1},{column + 1}")
         if current_mode == "command":
             print(f":{command_buffer}", end="")
             sys.stdout.flush()
         else:
-            set_cursor_position(line_no + 1 - scroll, column + 1)
+            set_cursor_position(line_no + 1 - scroll, column + 1 + line_num_length + 1)
 
         key = get_key_or_exit()
         modes[current_mode][ord(key)]()
