@@ -176,13 +176,20 @@ def main(argv):
         nonlocal current_mode
         current_mode = mode
 
-    def enter_insert_mode_append():
+    def home():
+        nonlocal column
+        column = 0
+
+    def end():
         nonlocal line_no
         nonlocal column
         nonlocal buffer_action
         buffer = buffer_action(ACTION_NOOP)
-        set_mode("insert")
         column = len(buffer[line_no])
+
+    def enter_insert_mode_append():
+        end()
+        set_mode("insert")
 
     # Escape
     modes["insert"][27] = lambda: set_mode("normal")
@@ -190,6 +197,8 @@ def main(argv):
     modes["normal"][ord("i")] = lambda: set_mode("insert")
     modes["normal"][ord("A")] = enter_insert_mode_append
     modes["normal"][ord(":")] = lambda: set_mode("command")
+    modes["normal"][ord("0")] = home
+    modes["normal"][ord("$")] = end
 
     def move_cursor(c, l):
         state = buffer_action(ACTION_NOOP)
