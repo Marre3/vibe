@@ -205,6 +205,7 @@ def main(argv):
             try:
                 with open(filename, "w") as f:
                     f.write("\n".join(buffer))
+                    f.write("\n") # Trailing newline, vi(m)-style
             except IOError:
                 input(f"\nUnable to write to file {filename}... Press enter to continue.")
 
