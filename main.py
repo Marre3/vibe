@@ -226,7 +226,7 @@ def main(argv):
                 except IOError:
                     input(f"\nUnable to read file {filename}... Press enter to continue.")
                 else:
-                    buffer_action = new_undoable(contents.split("\n"), make_carried_state)
+                    buffer_action = new_undoable(contents.strip("\r").split("\n"), make_carried_state)
                     line_no = 0
                     column = 0
             else:
@@ -339,7 +339,7 @@ def main(argv):
         if os.path.exists(filename):
             with open(filename) as f:
                 contents = f.read()
-            lines = contents.split()
+            lines = contents.strip("\r").split("\n")
             if len(lines) == 0:
                 lines.append("")
             buffer_action = new_undoable(lines, make_carried_state)
