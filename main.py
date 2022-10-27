@@ -5,6 +5,8 @@ import re
 import sys
 import copy
 
+filename = None
+
 is_unix = True
 try:
     # These modules don't exist
@@ -195,25 +197,31 @@ def main(argv):
     def command_w(args):
         """ Write to file """
         nonlocal buffer_action
+        global filename
         buffer = buffer_action(ACTION_NOOP)
-        if len(args) == 0:
-            input("\nNo filename given... Press enter to continue.")
-        elif not args.startswith(" "):
-            input("\nMalformed write command... Press enter to continue.")
-        else:
-            filename = args[1:]
-            try:
-                with open(filename, "w") as f:
-                    f.write("\n".join(buffer))
-                    f.write("\n") # Trailing newline, vi(m)-style
-            except IOError:
-                input(f"\nUnable to write to file {filename}... Press enter to continue.")
+        if not filename:
+            if len(args) == 0:
+                input("\nNo filename given... Press enter to continue.")
+                return
+            elif not args.startswith(" "):
+                input("\nMalformed write command... Press enter to continue.")
+                return
+            else:
+                filename = args[1:]
+
+        try:
+            with open(filename, "w") as f:
+                f.write("\n".join(buffer))
+                f.write("\n") # Trailing newline, vi(m)-style
+        except IOError:
+            input(f"\nUnable to write to file {filename}... Press enter to continue.")
 
     def command_file(args):
         """ Open file """
         nonlocal buffer_action
         nonlocal line_no
         nonlocal column
+        global filename
         if len(args) == 0:
             input("\nNo filename given... Press enter to continue.")
         elif not args.startswith(" "):
@@ -226,7 +234,10 @@ def main(argv):
                         contents = f.read()
                 except IOError:
                     input(f"\nUnable to read file {filename}... Press enter to continue.")
+                    filename = None
                 else:
+                    if contents.endswith("\n"):
+                        contents = contents[:-1]
                     buffer_action = new_undoable(contents.strip("\r").split("\n"), make_carried_state)
                     line_no = 0
                     column = 0
@@ -338,16 +349,20 @@ def main(argv):
         tty.setcbreak(sys.stdin.fileno())
 
     if len(argv) > 1:
+        global filename
         filename = argv[1]
         if os.path.exists(filename):
             with open(filename) as f:
                 contents = f.read()
+            if contents.endswith("\n"):
+                contents = contents[:-1]
             lines = contents.strip("\r").split("\n")
             if len(lines) == 0:
                 lines.append("")
             buffer_action = new_undoable(lines, make_carried_state)
         else:
             input(f"File {filename} not found. Press enter to continue.")
+            filename = None
 
         buffer = buffer_action(ACTION_NOOP)
         #for line in buffer:
@@ -379,6 +394,8 @@ def main(argv):
             print(ord(key))
             print(buffer)
         print(f"mode: {current_mode}, cursor: {line_no + 1},{column + 1}")
+        if filename:
+            print(f"file {filename}")
         if current_mode == "command":
             print(f":{command_buffer}", end="")
             sys.stdout.flush()
