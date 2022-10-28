@@ -362,6 +362,22 @@ def main(argv):
     modes["normal"][ord("z")] = lambda: buffer_action(ACTION_UNDO)
     modes["normal"][ord("r")] = lambda: buffer_action(ACTION_REDO)
 
+    def do_callback(key):
+        modes[current_mode][ord(key)]()
+
+    def n_times_do(n):
+        def _do():
+            times = n
+            key = get_key_or_exit()
+            while ord("0") <= ord(key) <= ord("9"):
+                times = times * 10 + int(key)
+                key = get_key_or_exit()
+            for _ in range(times):
+                do_callback(key)
+        return _do
+
+    for i in range(1, 10):
+        modes["normal"][ord(str(i))] = n_times_do(i)
 
     if is_unix:
         tty.setcbreak(sys.stdin.fileno())
@@ -421,7 +437,7 @@ def main(argv):
             set_cursor_position(line_no + 1 - scroll, column + 1 + line_num_length + 1)
 
         key = get_key_or_exit()
-        modes[current_mode][ord(key)]()
+        do_callback(key)
 
 
 if __name__ == "__main__":
