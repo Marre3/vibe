@@ -347,7 +347,7 @@ def main(argv):
             h = state[c_line_no][c_column:]
             state[c_line_no] = l+h
             column = c_column - 1
-            lind_no = c_line_no
+            line_no = c_line_no
         elif c_line_no != 0:
             del state[c_line_no]
             new_line_no = c_line_no - 1
